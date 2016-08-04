@@ -80,7 +80,9 @@ uhd_sink_c::uhd_sink_c(const std::string &args) :
          "nchan" == entry.first ||
          "subdev" == entry.first ||
          "lo_offset" == entry.first ||
-         "uhd" == entry.first )
+         "uhd" == entry.first ||
+         "clock_src" == entry.first ||
+         "time_src" == entry.first )
       continue;
 
     arguments += entry.first + "=" + entry.second + ",";
@@ -105,6 +107,12 @@ uhd_sink_c::uhd_sink_c(const std::string &args) :
     stream_args.args["fullscale"] = dict["fullscale"];
 
   _snk = gr::uhd::usrp_sink::make( arguments, stream_args );
+
+  if (dict.count("clock_src"))
+    _snk->set_clock_source(dict["clock_src"]);
+
+  if (dict.count("time_src"))
+    _snk->set_time_source(dict["time_src"]);
 
   if (dict.count("subdev"))
     _snk->set_subdev_spec( dict["subdev"] );

@@ -81,7 +81,9 @@ uhd_source_c::uhd_source_c(const std::string &args) :
          "nchan" == entry.first ||
          "subdev" == entry.first ||
          "lo_offset" == entry.first ||
-         "uhd" == entry.first )
+         "uhd" == entry.first ||
+         "clock_src" == entry.first ||
+         "time_src" == entry.first )
       continue;
 
     arguments += entry.first + "=" + entry.second + ",";
@@ -106,6 +108,12 @@ uhd_source_c::uhd_source_c(const std::string &args) :
     stream_args.args["fullscale"] = dict["fullscale"];
 
   _src = gr::uhd::usrp_source::make( arguments, stream_args );
+
+  if (dict.count("clock_src"))
+    _src->set_clock_source(dict["clock_src"]);
+
+  if (dict.count("time_src"))
+    _src->set_time_source(dict["time_src"]);
 
   if (dict.count("subdev"))
     _src->set_subdev_spec( dict["subdev"] );
