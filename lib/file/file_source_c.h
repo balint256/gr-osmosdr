@@ -23,6 +23,8 @@
 #include <gnuradio/hier_block2.h>
 #include <gnuradio/blocks/file_source.h>
 #include <gnuradio/blocks/throttle.h>
+#include <gnuradio/blocks/interleaved_short_to_complex.h>
+#include <gnuradio/blocks/multiply_const_cc.h>
 
 #include "source_iface.h"
 
@@ -39,7 +41,7 @@ class file_source_c :
 private:
   friend file_source_c_sptr make_file_source_c(const std::string &args);
 
-  file_source_c(const std::string &args);
+  file_source_c(const std::string &args, int item_size = sizeof(gr_complex));
 
 public:
   ~file_source_c();
@@ -77,6 +79,8 @@ public:
 private:
   gr::blocks::file_source::sptr _source;
   gr::blocks::throttle::sptr _throttle;
+  gr::blocks::interleaved_short_to_complex::sptr _s2c;
+  gr::blocks::multiply_const_cc::sptr _mul;
   double _file_rate;
   double _freq, _rate;
 };

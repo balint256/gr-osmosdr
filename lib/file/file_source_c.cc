@@ -35,19 +35,32 @@ using namespace boost::assign;
 
 file_source_c_sptr make_file_source_c(const std::string &args)
 {
-  return gnuradio::get_initial_sptr(new file_source_c(args));
+  dict_t dict = params_to_dict(args);
+
+  int item_size = sizeof(gr_complex);
+
+  if (dict.count("type"))
+  {
+    std::string type = dict["type"];
+    if (type == "sc16")
+      item_size = sizeof(short) * 2;
+  }
+
+  return gnuradio::get_initial_sptr(new file_source_c(args, item_size));
 }
 
-file_source_c::file_source_c(const std::string &args) :
+file_source_c::file_source_c(const std::string &args, int item_size/* = sizeof(gr_complex)*/) :
   gr::hier_block2("file_source_c",
                  gr::io_signature::make(0, 0, 0),
-                 gr::io_signature::make(1, 1, sizeof (gr_complex)))
+                 gr::io_signature::make(1, 1, /*sizeof (gr_complex)*/item_size))
 {
   std::string filename;
   bool repeat = true;
   bool throttle = true;
   _freq = 0;
   _rate = 0;
+  std::string type("fc32");
+  bool sc16 = false;
 
   dict_t dict = params_to_dict(args);
 
@@ -75,19 +88,41 @@ file_source_c::file_source_c(const std::string &args) :
   if (0 == _rate && throttle)
     throw std::runtime_error("Parameter 'rate' is missing in arguments.");
 
+  if (dict.count("type"))
+  {
+    type = dict["type"];
+    if (type == "sc16")
+      sc16 = true;
+  }
+
   _file_rate = _rate;
 
-  _source = gr::blocks::file_source::make( sizeof(gr_complex),
+  _source = gr::blocks::file_source::make( item_size,
                                            filename.c_str(),
                                            repeat );
 
   _throttle = gr::blocks::throttle::make( sizeof(gr_complex), _file_rate );
 
-  if (throttle) {
-    connect( _source, 0, _throttle, 0 );
-    connect( _throttle, 0, self(), 0 );
-  } else {
-    connect( _source, 0, self(), 0 );
+  if (sc16) {
+    _s2c = gr::blocks::interleaved_short_to_complex::make(true);
+    _mul = gr::blocks::multiply_const_cc::make(gr_complex(1.0 / (double)(1 << 15), 0.0));
+    connect( _source, 0, _s2c, 0);
+    connect( _s2c, 0, _mul, 0);
+    if (throttle) {
+      connect( _mul, 0, _throttle, 0);
+      connect( _throttle, 0, self(), 0);
+    }
+    else {
+      connect(_mul, 0, self(), 0);
+    }
+  }
+  else {
+    if (throttle) {
+      connect( _source, 0, _throttle, 0 );
+      connect( _throttle, 0, self(), 0 );
+    } else {
+      connect( _source, 0, self(), 0 );
+    }
   }
 }
 
